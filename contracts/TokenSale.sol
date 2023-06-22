@@ -13,8 +13,16 @@ import "./IERC1363Spender.sol";
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-abstract contract ERC1363 is ERC20, IERC1363, ERC165 {
-    using Address for address;
+contract TokenSale is ERC20, IERC1363, ERC165 {
+    using Address for address;   
+
+    constructor() ERC20("LinearTokenSale", "LTS") {
+    } 
+
+    receive() external payable {
+        uint256 tokenAmount = msg.value; // dummy pricing
+        _mint(msg.sender, tokenAmount);
+    }
 
     /**
      * @dev See {IERC165-supportsInterface}.
