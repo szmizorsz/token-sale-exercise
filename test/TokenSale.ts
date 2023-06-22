@@ -86,4 +86,75 @@ describe("TokenSale", function () {
       expect(tokenBalaneSecondAccount).to.equal(etherSentBySecondAccount);
     });
   });
+
+  describe("Receive token, burn and send ether back", function () {
+    it("Should recieve token from one user, burn it and send ether back", async function () {
+      const { tokenSale, firstAccount } = await loadFixture(deployFixture);
+
+      const etherToSend = ethers.parseEther("1.0");
+      const tokenToMint = etherToSend; // dummy price model
+
+      const contractETHBalanceBefore = await ethers.provider.getBalance(
+        tokenSale.getAddress()
+      );
+      expect(contractETHBalanceBefore).to.equal(0);
+      const firstAccountETHBalanceBefore = await ethers.provider.getBalance(
+        firstAccount.getAddress()
+      );
+      const sendETHTx = await firstAccount.sendTransaction({
+        to: tokenSale.getAddress(),
+        value: etherToSend,
+      });
+      const sendETHreceipt = await sendETHTx.wait();
+      const gasUsed = sendETHreceipt?.gasUsed;
+      if (gasUsed) {
+        const gasPrice = sendETHTx.gasPrice * gasUsed;
+        const firstAccountETHBalanceAfterMint =
+          await ethers.provider.getBalance(firstAccount.getAddress());
+        expect(firstAccountETHBalanceAfterMint).to.equal(
+          firstAccountETHBalanceBefore - etherToSend - gasPrice
+        );
+      }
+
+      const contractETHBalanceAfterMint = await ethers.provider.getBalance(
+        tokenSale.getAddress()
+      );
+      expect(contractETHBalanceAfterMint).to.equal(etherToSend);
+      const firstAccountTokenBalaneAfterMint = await tokenSale.balanceOf(
+        firstAccount.getAddress()
+      );
+      expect(firstAccountTokenBalaneAfterMint).to.equal(tokenToMint);
+
+      const firstAccountETHBalanceBeforeBurn = await ethers.provider.getBalance(
+        firstAccount.getAddress()
+      );
+
+      const tokenBurnTx = await tokenSale
+        .connect(firstAccount)
+        ["transferAndCall(address,uint256)"](
+          tokenSale.getAddress(),
+          tokenToMint
+        );
+
+      const tokenBurnReceipt = await tokenBurnTx.wait();
+      const gasUsedTokenBurnTx = tokenBurnReceipt?.gasUsed;
+      if (gasUsedTokenBurnTx) {
+        const gasPrice = tokenBurnTx.gasPrice * gasUsedTokenBurnTx;
+        const firstAccountETHBalanceAfterBurn =
+          await ethers.provider.getBalance(firstAccount.getAddress());
+        expect(firstAccountETHBalanceAfterBurn).to.equal(
+          firstAccountETHBalanceBeforeBurn + etherToSend - gasPrice
+        );
+      }
+
+      const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
+        tokenSale.getAddress()
+      );
+      expect(contractETHBalanceAfterBurn).to.equal(0);
+      const firstAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
+        firstAccount.getAddress()
+      );
+      expect(firstAccountTokenBalaneAfterBurn).to.equal(0);
+    });
+  });
 });

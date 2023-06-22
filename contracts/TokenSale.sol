@@ -13,11 +13,10 @@ import "./IERC1363Spender.sol";
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract TokenSale is ERC20, IERC1363, ERC165 {
-    using Address for address;   
+contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
+    using Address for address;
 
-    constructor() ERC20("LinearTokenSale", "LTS") {
-    } 
+    constructor() ERC20("LinearTokenSale", "LTS") {}
 
     receive() external payable {
         uint256 tokenAmount = msg.value; // dummy pricing
@@ -27,8 +26,13 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
-        return interfaceId == type(IERC1363).interfaceId || super.supportsInterface(interfaceId);
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC165, IERC165) returns (bool) {
+        return
+            interfaceId == type(IERC1363).interfaceId ||
+            interfaceId == type(IERC1363Receiver).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     /**
@@ -37,7 +41,10 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount) public virtual override returns (bool) {
+    function transferAndCall(
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return transferAndCall(to, amount, "");
     }
 
@@ -48,9 +55,16 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferAndCall(address to, uint256 amount, bytes memory data) public virtual override returns (bool) {
+    function transferAndCall(
+        address to,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override returns (bool) {
         transfer(to, amount);
-        require(_checkOnTransferReceived(_msgSender(), to, amount, data), "ERC1363: receiver returned wrong data");
+        require(
+            _checkOnTransferReceived(_msgSender(), to, amount, data),
+            "ERC1363: receiver returned wrong data"
+        );
         return true;
     }
 
@@ -61,7 +75,11 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
      * @param amount The amount of tokens to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function transferFromAndCall(address from, address to, uint256 amount) public virtual override returns (bool) {
+    function transferFromAndCall(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return transferFromAndCall(from, to, amount, "");
     }
 
@@ -80,7 +98,10 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
         bytes memory data
     ) public virtual override returns (bool) {
         transferFrom(from, to, amount);
-        require(_checkOnTransferReceived(from, to, amount, data), "ERC1363: receiver returned wrong data");
+        require(
+            _checkOnTransferReceived(from, to, amount, data),
+            "ERC1363: receiver returned wrong data"
+        );
         return true;
     }
 
@@ -90,7 +111,10 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
      * @param amount The amount allowed to be transferred
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount) public virtual override returns (bool) {
+    function approveAndCall(
+        address spender,
+        uint256 amount
+    ) public virtual override returns (bool) {
         return approveAndCall(spender, amount, "");
     }
 
@@ -101,10 +125,38 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
      * @param data Additional data with no specified format.
      * @return A boolean that indicates if the operation was successful.
      */
-    function approveAndCall(address spender, uint256 amount, bytes memory data) public virtual override returns (bool) {
+    function approveAndCall(
+        address spender,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override returns (bool) {
         approve(spender, amount);
-        require(_checkOnApprovalReceived(spender, amount, data), "ERC1363: spender returned wrong data");
+        require(
+            _checkOnApprovalReceived(spender, amount, data),
+            "ERC1363: spender returned wrong data"
+        );
         return true;
+    }
+
+    function onTransferReceived(
+        address,
+        address sender,
+        uint256 amount,
+        bytes calldata
+    ) external returns (bytes4) {
+        require(
+            msg.sender == address(this),
+            "Only tokenSale contract can trigger onTransferReceived"
+        );
+        // tokens are already transfered back to the contract at this point
+        _burn(address(this), amount);
+
+        // Dummy pricing 1 token = 1 ether
+        uint etherValue = amount;
+        (bool success, ) = sender.call{value: etherValue}("");
+        require(success, "Ether payment failed on token recieval");
+
+        return IERC1363Receiver.onTransferReceived.selector;
     }
 
     /**
@@ -126,7 +178,14 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
             revert("ERC1363: transfer to non contract address");
         }
 
-        try IERC1363Receiver(recipient).onTransferReceived(_msgSender(), sender, amount, data) returns (bytes4 retval) {
+        try
+            IERC1363Receiver(recipient).onTransferReceived(
+                _msgSender(),
+                sender,
+                amount,
+                data
+            )
+        returns (bytes4 retval) {
             return retval == IERC1363Receiver.onTransferReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
@@ -157,7 +216,13 @@ contract TokenSale is ERC20, IERC1363, ERC165 {
             revert("ERC1363: approve a non contract address");
         }
 
-        try IERC1363Spender(spender).onApprovalReceived(_msgSender(), amount, data) returns (bytes4 retval) {
+        try
+            IERC1363Spender(spender).onApprovalReceived(
+                _msgSender(),
+                amount,
+                data
+            )
+        returns (bytes4 retval) {
             return retval == IERC1363Spender.onApprovalReceived.selector;
         } catch (bytes memory reason) {
             if (reason.length == 0) {
