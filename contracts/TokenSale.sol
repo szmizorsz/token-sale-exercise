@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./IERC1363.sol";
 import "./IERC1363Receiver.sol";
 import "./IERC1363Spender.sol";
+import "./Math.sol";
 
 /**
  * @title ERC1363
@@ -16,10 +17,19 @@ import "./IERC1363Spender.sol";
 contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     using Address for address;
 
-    constructor() ERC20("LinearTokenSale", "LTS") {}
+    uint public curveSlope;
+    uint public curveConstant;
+
+    constructor(
+        uint256 _curveSlope,
+        uint256 _curveConstant
+    ) ERC20("LinearTokenSale", "LTS") {
+        curveSlope = _curveSlope;
+        curveConstant = _curveConstant;
+    }
 
     receive() external payable {
-        uint256 tokenAmount = msg.value; // dummy pricing
+        uint256 tokenAmount = _calculateTokensFromPrice(msg.value);
         _mint(msg.sender, tokenAmount);
     }
 
@@ -234,5 +244,67 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
                 }
             }
         }
+    }
+
+    /**
+     * @dev Returns the price for buying a specified number of tokens.
+     * @param tokensToBuy The number of tokens to buy.
+     * @return The price in wei.
+     */
+    function calculatePriceForBuy(
+        uint256 tokensToBuy
+    ) external view returns (uint256) {
+        return _calculatePriceForBuy(tokensToBuy);
+    }
+
+    /**
+     * @dev Returns the price for buying a specified number of tokens.
+     * @param price The number of tokens to buy.
+     * @return The price in wei.
+     */
+    function calculateTokensFromPrice(
+        uint256 price
+    ) external view returns (uint256) {
+        return _calculateTokensFromPrice(price);
+    }
+
+    /**
+     * @dev Calculates the price for buying a certain number of tokens based on the bonding curve formula.
+     * @param _tokensToBuy The number of tokens to buy.
+     * @return The price in wei for the specified number of tokens.
+     */
+    function _calculatePriceForBuy(
+        uint256 _tokensToBuy
+    ) private view returns (uint256) {
+        return
+            ((2 *
+                curveConstant +
+                curveSlope *
+                (2 * totalSupply() + _tokensToBuy + 1)) * _tokensToBuy) / 2;
+    }
+
+    /**
+     * @dev Calculates the price for buying a certain number of tokens based on the bonding curve formula.
+     * @param _price The number of tokens to buy.
+     * @return The price in wei for the specified number of tokens.
+     */
+    function _calculateTokensFromPrice(
+        uint256 _price
+    ) private view returns (uint256) {
+        uint256 quadraticBase = 2 *
+            curveConstant +
+            2 *
+            curveSlope *
+            totalSupply() +
+            curveSlope;
+        uint quadratic = quadraticBase * quadraticBase;
+        return
+            (Math.sqrt(quadratic + 8 * _price) -
+                (2 *
+                    curveConstant +
+                    2 *
+                    curveSlope *
+                    totalSupply() +
+                    curveSlope)) / 2;
     }
 }
