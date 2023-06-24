@@ -10,6 +10,8 @@ import "./IERC1363Receiver.sol";
 import "./IERC1363Spender.sol";
 import "./Math.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
@@ -158,11 +160,13 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
             msg.sender == address(this),
             "Only tokenSale contract can trigger onTransferReceived"
         );
+
         // tokens are already transfered back to the contract at this point
         _burn(address(this), amount);
 
-        // Dummy pricing 1 token = 1 ether
-        uint etherValue = amount;
+        // After the burn, the value the user gets for the burnt tokens:
+        // as if he would buy the tokens at this point
+        uint etherValue = _calculatePrice(amount);
         (bool success, ) = sender.call{value: etherValue}("");
         require(success, "Ether payment failed on token recieval");
 
@@ -251,10 +255,10 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
      * @param tokensToBuy The number of tokens to buy.
      * @return The price in wei.
      */
-    function calculatePriceForBuy(
+    function calculatePrice(
         uint256 tokensToBuy
     ) external view returns (uint256) {
-        return _calculatePriceForBuy(tokensToBuy);
+        return _calculatePrice(tokensToBuy);
     }
 
     /**
@@ -273,7 +277,7 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
      * @param _tokensToBuy The number of tokens to buy.
      * @return The price in wei for the specified number of tokens.
      */
-    function _calculatePriceForBuy(
+    function _calculatePrice(
         uint256 _tokensToBuy
     ) private view returns (uint256) {
         return
