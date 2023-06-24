@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
+
 /**
  * @title ERC1363Spender interface
  * @dev Interface for any contract that wants to support `approveAndCall`
@@ -23,5 +24,9 @@ interface IERC1363Spender {
      * @param data bytes Additional data with no specified format
      * @return `bytes4(keccak256("onApprovalReceived(address,uint256,bytes)"))` unless throwing
      */
-    function onApprovalReceived(address sender, uint256 amount, bytes calldata data) external returns (bytes4);
+    function onApprovalReceived(
+        address sender,
+        uint256 amount,
+        bytes calldata data
+    ) external returns (bytes4);
 }

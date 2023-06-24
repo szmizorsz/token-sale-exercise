@@ -11,7 +11,7 @@ describe("TokenSale", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
-  async function deployFixture() {
+  async function deployFixtureWithCurveSlope1AndConstant0() {
     // Contracts are deployed using the first signer/account by default
     const [owner, firstAccount, secondAccount] = await ethers.getSigners();
 
@@ -34,9 +34,35 @@ describe("TokenSale", function () {
     };
   }
 
+  // Since fixtures can not except arguments, we have to define a new fixture for each different curve
+  async function deployFixtureWithCurveSlope2AndConstant1() {
+    // Contracts are deployed using the first signer/account by default
+    const [owner, firstAccount, secondAccount] = await ethers.getSigners();
+
+    const curveSlope = 2;
+    const curveConstant = 1;
+
+    const TokenSale = await ethers.getContractFactory("TokenSale");
+    const tokenSale = (await TokenSale.deploy(
+      curveSlope,
+      curveConstant
+    )) as TokenSale;
+
+    return {
+      tokenSale,
+      owner,
+      firstAccount,
+      secondAccount,
+      curveSlope,
+      curveConstant,
+    };
+  }
+
   describe("Receive ether", function () {
     it("Should recieve ether from one user and mint tokens", async function () {
-      const { tokenSale, firstAccount } = await loadFixture(deployFixture);
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
+      );
 
       const weiToSend = 3;
 
@@ -62,7 +88,7 @@ describe("TokenSale", function () {
 
     it("Should recieve ether from two user and mint tokens", async function () {
       const { tokenSale, firstAccount, secondAccount } = await loadFixture(
-        deployFixture
+        deployFixtureWithCurveSlope1AndConstant0
       );
 
       const weiSentByFirstAccount = 3;
@@ -102,7 +128,9 @@ describe("TokenSale", function () {
 
   describe("Receive token, burn and send ether back", function () {
     it("Should recieve token from one user, burn it and send ether back", async function () {
-      const { tokenSale, firstAccount } = await loadFixture(deployFixture);
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
+      );
 
       const weiToSend = 3;
       const tokenToMint = 2;
@@ -174,10 +202,10 @@ describe("TokenSale", function () {
     });
   });
 
-  describe("Calculate price, and number of tokens from price, based on the curve", function () {
+  describe("Calculate price, and number of tokens from price, based on the curve with contsant = 0, slope = 1", function () {
     it("Should calculate price for the first buy", async function () {
-      const { tokenSale, curveSlope, curveConstant } = await loadFixture(
-        deployFixture
+      const { tokenSale } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
       );
       const tokensToBuy = 3;
       const price = await tokenSale.calculatePriceForBuy(tokensToBuy);
@@ -186,21 +214,97 @@ describe("TokenSale", function () {
     });
 
     it("Should calculate price for the second buy", async function () {
-      const { tokenSale, firstAccount, curveSlope, curveConstant } =
-        await loadFixture(deployFixture);
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
+      );
 
       await firstAccount.sendTransaction({
         to: tokenSale.getAddress(),
         value: 3,
       });
 
-      const totalSupply = await tokenSale.totalSupply();
-      console.log("totalSupply", totalSupply.toString());
-
       const tokensToBuy = 3;
       const price = await tokenSale.calculatePriceForBuy(tokensToBuy);
 
       expect(price).to.equal(12);
+    });
+
+    it("Should calculate tokens from price before the first buy", async function () {
+      const { tokenSale } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
+      );
+      const price = 6;
+      const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
+
+      expect(tokensToBuy).to.equal(3);
+    });
+
+    it("Should calculate tokens from price before the second buy", async function () {
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope1AndConstant0
+      );
+
+      await firstAccount.sendTransaction({
+        to: tokenSale.getAddress(),
+        value: 3,
+      });
+      const price = 12;
+      const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
+
+      expect(tokensToBuy).to.equal(3);
+    });
+  });
+
+  describe("Calculate price, and number of tokens from price, based on the curve with contsant = 1, slope = 2", function () {
+    it("Should calculate price for the first buy", async function () {
+      const { tokenSale } = await loadFixture(
+        deployFixtureWithCurveSlope2AndConstant1
+      );
+      const tokensToBuy = 3;
+      const price = await tokenSale.calculatePriceForBuy(tokensToBuy);
+
+      expect(price).to.equal(15);
+    });
+
+    it("Should calculate price for the second buy", async function () {
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope2AndConstant1
+      );
+
+      await firstAccount.sendTransaction({
+        to: tokenSale.getAddress(),
+        value: 15,
+      });
+
+      const tokensToBuy = 3;
+      const price = await tokenSale.calculatePriceForBuy(tokensToBuy);
+
+      expect(price).to.equal(33);
+    });
+
+    it("Should calculate tokens from price before the first buy", async function () {
+      const { tokenSale } = await loadFixture(
+        deployFixtureWithCurveSlope2AndConstant1
+      );
+      const price = 15;
+      const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
+
+      expect(tokensToBuy).to.equal(3);
+    });
+
+    it("Should calculate tokens from price before the second buy", async function () {
+      const { tokenSale, firstAccount } = await loadFixture(
+        deployFixtureWithCurveSlope2AndConstant1
+      );
+
+      await firstAccount.sendTransaction({
+        to: tokenSale.getAddress(),
+        value: 15,
+      });
+      const price = 33;
+      const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
+
+      expect(tokensToBuy).to.equal(3);
     });
   });
 });
