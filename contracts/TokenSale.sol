@@ -10,8 +10,6 @@ import "./IERC1363Receiver.sol";
 import "./IERC1363Spender.sol";
 import "./Math.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
