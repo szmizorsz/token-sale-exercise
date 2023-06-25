@@ -10,6 +10,8 @@ import "./IERC1363Receiver.sol";
 import "./IERC1363Spender.sol";
 import "./Math.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
@@ -17,8 +19,8 @@ import "./Math.sol";
 contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     using Address for address;
 
-    uint public curveSlope;
-    uint public curveConstant;
+    uint256 public curveSlope;
+    uint256 public curveConstant;
 
     constructor(
         uint256 _curveSlope,
@@ -158,7 +160,6 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
             msg.sender == address(this),
             "Only tokenSale contract can trigger onTransferReceived"
         );
-
         // tokens are already transfered back to the contract at this point
         _burn(address(this), amount);
 
@@ -299,14 +300,14 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
             curveSlope *
             totalSupply() +
             curveSlope;
-        uint quadratic = quadraticBase * quadraticBase;
+        uint256 quadratic = quadraticBase * quadraticBase;
         return
-            (Math.sqrt(quadratic + 8 * _price) -
+            (Math.sqrt(quadratic + 8 * _price * curveSlope) -
                 (2 *
                     curveConstant +
                     2 *
                     curveSlope *
                     totalSupply() +
-                    curveSlope)) / 2;
+                    curveSlope)) / (2 * curveSlope);
     }
 }
