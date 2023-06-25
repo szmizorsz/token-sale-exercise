@@ -8,9 +8,7 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./IERC1363.sol";
 import "./IERC1363Receiver.sol";
 import "./IERC1363Spender.sol";
-import "./Math.sol";
-
-import "hardhat/console.sol";
+import "@prb/math/contracts/PRBMathUD60x18Typed.sol";
 
 /**
  * @title ERC1363
@@ -18,16 +16,17 @@ import "hardhat/console.sol";
  */
 contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     using Address for address;
+    using PRBMathUD60x18Typed for PRBMath.UD60x18;
 
-    uint256 public curveSlope;
-    uint256 public curveConstant;
+    PRBMath.UD60x18 private curveConstant;
+    PRBMath.UD60x18 private curveSlope;
 
     constructor(
         uint256 _curveSlope,
         uint256 _curveConstant
     ) ERC20("LinearTokenSale", "LTS") {
-        curveSlope = _curveSlope;
-        curveConstant = _curveConstant;
+        curveConstant = PRBMath.UD60x18({value: _curveConstant});
+        curveSlope = PRBMath.UD60x18({value: _curveSlope});
     }
 
     receive() external payable {
@@ -279,11 +278,24 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     function _calculatePrice(
         uint256 _tokensToBuy
     ) private view returns (uint256) {
+        PRBMath.UD60x18 memory _tokensToBuy_ud = PRBMath.UD60x18({
+            value: _tokensToBuy
+        });
+        PRBMath.UD60x18 memory totalSupply_ud = PRBMath.UD60x18({
+            value: totalSupply()
+        });
+        PRBMath.UD60x18 memory constant_1 = PRBMath.UD60x18({value: 1e18});
+        PRBMath.UD60x18 memory constant_2 = PRBMath.UD60x18({value: 2e18});
         return
-            ((2 *
-                curveConstant +
-                curveSlope *
-                (2 * totalSupply() + _tokensToBuy + 1)) * _tokensToBuy) / 2;
+            (
+                (curveConstant.mul(constant_2)).add(
+                    curveSlope.mul(
+                        totalSupply_ud.mul(constant_2).add(_tokensToBuy_ud).add(
+                            constant_1
+                        )
+                    )
+                )
+            ).mul(_tokensToBuy_ud).div(constant_2).value;
     }
 
     /**
@@ -294,20 +306,27 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     function _calculateTokensFromPrice(
         uint256 _price
     ) private view returns (uint256) {
-        uint256 quadraticBase = 2 *
-            curveConstant +
-            2 *
-            curveSlope *
-            totalSupply() +
-            curveSlope;
-        uint256 quadratic = quadraticBase * quadraticBase;
+        PRBMath.UD60x18 memory _price_ud = PRBMath.UD60x18({value: _price});
+        PRBMath.UD60x18 memory totalSupply_ud = PRBMath.UD60x18({
+            value: totalSupply()
+        });
+        PRBMath.UD60x18 memory constant_2 = PRBMath.UD60x18({value: 2e18});
+        PRBMath.UD60x18 memory constant_8 = PRBMath.UD60x18({value: 8e18});
         return
-            (Math.sqrt(quadratic + 8 * _price * curveSlope) -
-                (2 *
-                    curveConstant +
-                    2 *
-                    curveSlope *
-                    totalSupply() +
-                    curveSlope)) / (2 * curveSlope);
+            curveConstant
+                .mul(constant_2)
+                .add(curveSlope.mul(totalSupply_ud.mul(constant_2)))
+                .add(curveSlope)
+                .pow(constant_2)
+                .add(_price_ud.mul(curveSlope).mul(constant_8))
+                .sqrt()
+                .sub(
+                    curveConstant
+                        .mul(constant_2)
+                        .add(curveSlope.mul(constant_2).mul(totalSupply_ud))
+                        .add(curveSlope)
+                )
+                .div(curveSlope.mul(constant_2))
+                .value;
     }
 }

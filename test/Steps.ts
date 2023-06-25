@@ -3,7 +3,7 @@ import { TokenSale } from "../typechain-types";
 export async function sendETHtoTokenSaleContract(
   account: any,
   contract: TokenSale,
-  weiToSend: number
+  weiToSend: bigint
 ) {
   const sendTx = await account.sendTransaction({
     to: contract.getAddress(),
@@ -21,7 +21,7 @@ export async function sendETHtoTokenSaleContract(
 export async function burnTokenInTokenSaleContract(
   account: any,
   contract: TokenSale,
-  tokenToMint: number
+  tokenToMint: bigint
 ) {
   const burnTx = await contract
     .connect(account)

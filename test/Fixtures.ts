@@ -11,7 +11,8 @@ export async function deployFixtureWithCurveSlope1AndConstant0() {
   // Contracts are deployed using the first signer/account by default
   const [owner, firstAccount, secondAccount] = await ethers.getSigners();
 
-  const curveSlope = 1;
+  // slope = 1;
+  const curveSlope = 1000000000000000000n;
   const curveConstant = 0;
 
   const TokenSale = await ethers.getContractFactory("TokenSale");
@@ -34,8 +35,35 @@ export async function deployFixtureWithCurveSlope2AndConstant1() {
   // Contracts are deployed using the first signer/account by default
   const [owner, firstAccount, secondAccount] = await ethers.getSigners();
 
-  const curveSlope = 2;
-  const curveConstant = 1;
+  // slope = 2
+  const curveSlope = 2000000000000000000n;
+  // constant = 1
+  const curveConstant = 1000000000000000000n;
+
+  const TokenSale = await ethers.getContractFactory("TokenSale");
+  const tokenSale = (await TokenSale.deploy(
+    curveSlope,
+    curveConstant
+  )) as TokenSale;
+
+  return {
+    tokenSale,
+    owner,
+    firstAccount,
+    secondAccount,
+    curveSlope,
+    curveConstant,
+  };
+}
+
+export async function deployFixtureWithCurveSlope05AndConstant1() {
+  // Contracts are deployed using the first signer/account by default
+  const [owner, firstAccount, secondAccount] = await ethers.getSigners();
+
+  // slope = 0.5
+  const curveSlope = 500000000000000000n;
+  // constant = 1
+  const curveConstant = 1000000000000000000n;
 
   const TokenSale = await ethers.getContractFactory("TokenSale");
   const tokenSale = (await TokenSale.deploy(

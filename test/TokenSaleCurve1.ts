@@ -6,6 +6,7 @@ import {
   sendETHtoTokenSaleContract,
   burnTokenInTokenSaleContract,
 } from "./Steps";
+import { approximateEquality, allowedError } from "./Util";
 
 describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
   describe("Calculate price", function () {
@@ -16,11 +17,11 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       );
 
       // Action
-      const tokensToBuy = 3;
+      const tokensToBuy = ethers.parseEther("3");
       const price = await tokenSale.calculatePrice(tokensToBuy);
 
       // Assertions
-      expect(price).to.equal(6);
+      expect(price).to.equal(ethers.parseEther("6"));
     });
 
     it("Should calculate price for the second buy", async function () {
@@ -31,15 +32,15 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
 
       await firstAccount.sendTransaction({
         to: tokenSale.getAddress(),
-        value: 3,
+        value: ethers.parseEther("3"),
       });
 
       // Action
-      const tokensToBuy = 3;
+      const tokensToBuy = ethers.parseEther("3");
       const price = await tokenSale.calculatePrice(tokensToBuy);
 
       // Assertions
-      expect(price).to.equal(12);
+      expect(price).to.equal(ethers.parseEther("12"));
     });
   });
 
@@ -51,11 +52,11 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       );
 
       // Action
-      const price = 6;
+      const price = ethers.parseEther("6");
       const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
 
       // Assertions
-      expect(tokensToBuy).to.equal(3);
+      expect(tokensToBuy).to.equal(ethers.parseEther("3"));
     });
 
     it("Should calculate tokens from price before the second buy", async function () {
@@ -66,15 +67,17 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
 
       await firstAccount.sendTransaction({
         to: tokenSale.getAddress(),
-        value: 3,
+        value: ethers.parseEther("3"),
       });
 
       // Action
-      const price = 12;
+      const price = ethers.parseEther("12");
       const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
 
       // Assertions
-      expect(tokensToBuy).to.equal(3);
+      const expectedTokens = ethers.parseEther("3");
+      expect(approximateEquality(tokensToBuy, expectedTokens, allowedError)).to
+        .be.true;
     });
   });
   describe("Receive ether and mint tokens", function () {
@@ -91,12 +94,12 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       expect(contractBalanceBefore).to.equal(0);
 
       // Action
-      const weiToSend = 3;
+      const weiToSend = ethers.parseEther("3");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
 
       // Assertions after
       const expectedContractBalanceAfter = weiToSend;
-      const expectedTokenBalance = 2;
+      const expectedTokenBalance = ethers.parseEther("2");
       const contractBalanceAfter = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
@@ -113,7 +116,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiSentByFirstAccount = 3;
+      const weiSentByFirstAccount = ethers.parseEther("3");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
@@ -121,7 +124,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       );
 
       // Action
-      const weiSentBySecondAccount = 7;
+      const weiSentBySecondAccount = ethers.parseEther("7");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -131,8 +134,8 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       // Assertions after
       const expectedContractBalanceAfter =
         weiSentByFirstAccount + weiSentBySecondAccount;
-      const expectedTokenBalaneFirstAccount = 2;
-      const expectedTokenBalaneSecondAccount = 2;
+      const expectedTokenBalaneFirstAccount = ethers.parseEther("2");
+      const expectedTokenBalaneSecondAccount = ethers.parseEther("2");
 
       const contractBalanceAfter = await ethers.provider.getBalance(
         tokenSale.getAddress()
@@ -146,9 +149,13 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       const tokenBalaneSecondAccount = await tokenSale.balanceOf(
         secondAccount.getAddress()
       );
-      expect(tokenBalaneSecondAccount).to.equal(
-        expectedTokenBalaneSecondAccount
-      );
+      expect(
+        approximateEquality(
+          tokenBalaneSecondAccount,
+          expectedTokenBalaneSecondAccount,
+          allowedError
+        )
+      ).to.be.true;
     });
   });
 
@@ -159,8 +166,8 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiToSend = 3;
-      const tokenToMint = 2;
+      const weiToSend = ethers.parseEther("3");
+      const tokenToMint = ethers.parseEther("2");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
 
       const firstAccountETHBalanceBeforeBurn = await ethers.provider.getBalance(
@@ -208,8 +215,8 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiToSend = 3;
-      const tokenToMint = 2;
+      const weiToSend = ethers.parseEther("3");
+      const tokenToMint = ethers.parseEther("2");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
 
       const firstAccountETHBalanceBeforeBurn = await ethers.provider.getBalance(
@@ -217,7 +224,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       );
 
       // Action
-      const tokenToBurn = 1;
+      const tokenToBurn = ethers.parseEther("1");
       const gasPrice = await burnTokenInTokenSaleContract(
         firstAccount,
         tokenSale,
@@ -226,7 +233,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
 
       // Assertions after
       if (gasPrice) {
-        const expectedWeiToReceived = 2;
+        const expectedWeiToReceived = ethers.parseEther("2");
         const expectedFirstAccountETHBalanceAfterBurn =
           firstAccountETHBalanceBeforeBurn +
           BigInt(expectedWeiToReceived) -
@@ -238,7 +245,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         );
       }
 
-      const expectedContractETHBalanceAfterBurn = 1;
+      const expectedContractETHBalanceAfterBurn = ethers.parseEther("1");
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
@@ -246,7 +253,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         expectedContractETHBalanceAfterBurn
       );
 
-      const expectedFirstAccountTokenBalaneAfterBurn = 1;
+      const expectedFirstAccountTokenBalaneAfterBurn = ethers.parseEther("1");
       const firstAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
         firstAccount.getAddress()
       );
@@ -261,19 +268,21 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiSentByFirstAccount = 3;
+      const weiSentByFirstAccount = ethers.parseEther("3");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
         weiSentByFirstAccount
       );
 
-      const weiSentBySecondAccount = 7;
-      const tokenToMintForSecondAccount = 2;
+      const weiSentBySecondAccount = ethers.parseEther("7");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
         weiSentBySecondAccount
+      );
+      const tokenToMintForSecondAccount = await tokenSale.balanceOf(
+        secondAccount.getAddress()
       );
 
       const secondAccountETHBalanceBeforeBurn =
@@ -294,18 +303,26 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
           gasPriceForBurn;
         const secondAccountETHBalanceAfterBurn =
           await ethers.provider.getBalance(secondAccount.getAddress());
-        expect(secondAccountETHBalanceAfterBurn).to.equal(
-          expectedSecondAccountETHBalanceAfterBurn
-        );
+        expect(
+          approximateEquality(
+            secondAccountETHBalanceAfterBurn,
+            expectedSecondAccountETHBalanceAfterBurn,
+            allowedError
+          )
+        ).to.be.true;
       }
 
       const expectedContractETHBalanceAfterBurn = weiSentByFirstAccount;
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
-      expect(contractETHBalanceAfterBurn).to.equal(
-        expectedContractETHBalanceAfterBurn
-      );
+      expect(
+        approximateEquality(
+          contractETHBalanceAfterBurn,
+          expectedContractETHBalanceAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
 
       const expectedSecondAccountTokenBalaneAfterBurn = 0;
       const secondAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
@@ -322,15 +339,15 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiSentByFirstAccount = 3;
+      const weiSentByFirstAccount = ethers.parseEther("3");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
         weiSentByFirstAccount
       );
 
-      const weiSentBySecondAccount = 7;
-      const tokenToMintForSecondAccount = 2;
+      const weiSentBySecondAccount = ethers.parseEther("7");
+      const tokenToMintForSecondAccount = ethers.parseEther("2");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -341,7 +358,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         await ethers.provider.getBalance(secondAccount.getAddress());
 
       // Action
-      const tokenToBurn = 1;
+      const tokenToBurn = ethers.parseEther("1");
       const gasPriceForBurn = await burnTokenInTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -350,33 +367,46 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
 
       // Assertions after
       if (gasPriceForBurn) {
-        const expectedWeiToReceived = 4;
+        const expectedWeiToReceived = ethers.parseEther("4");
         const expectedSecondAccountETHBalanceAfterBurn =
           secondAccountETHBalanceBeforeBurn +
           BigInt(expectedWeiToReceived) -
           gasPriceForBurn;
         const secondAccountETHBalanceAfterBurn =
           await ethers.provider.getBalance(secondAccount.getAddress());
-        expect(secondAccountETHBalanceAfterBurn).to.equal(
-          expectedSecondAccountETHBalanceAfterBurn
-        );
+        expect(
+          approximateEquality(
+            secondAccountETHBalanceAfterBurn,
+            expectedSecondAccountETHBalanceAfterBurn,
+            allowedError
+          )
+        ).to.be.true;
       }
 
-      const expectedContractETHBalanceAfterBurn = 6;
+      const expectedContractETHBalanceAfterBurn = ethers.parseEther("6");
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
-      expect(contractETHBalanceAfterBurn).to.equal(
-        expectedContractETHBalanceAfterBurn
-      );
 
-      const expectedSecondAccountTokenBalaneAfterBurn = 1;
+      expect(
+        approximateEquality(
+          contractETHBalanceAfterBurn,
+          expectedContractETHBalanceAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
+
+      const expectedSecondAccountTokenBalaneAfterBurn = ethers.parseEther("1");
       const secondAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
         secondAccount.getAddress()
       );
-      expect(secondAccountTokenBalaneAfterBurn).to.equal(
-        expectedSecondAccountTokenBalaneAfterBurn
-      );
+      expect(
+        approximateEquality(
+          secondAccountTokenBalaneAfterBurn,
+          expectedSecondAccountTokenBalaneAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
     });
 
     it("Should recieve ether from TWO users, mint tokens, burn BOTH users tokens completely and send ether back", async function () {
@@ -385,26 +415,30 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
         deployFixtureWithCurveSlope1AndConstant0
       );
 
-      const weiSentByFirstAccount = 3;
-      const tokenToMintForFirstAccount = 2;
+      const weiSentByFirstAccount = ethers.parseEther("3");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
         weiSentByFirstAccount
       );
+      const tokenSMintedForFirstAccount = await tokenSale.balanceOf(
+        firstAccount.getAddress()
+      );
 
-      const weiSentBySecondAccount = 7;
-      const tokenToMintForSecondAccount = 2;
+      const weiSentBySecondAccount = ethers.parseEther("7");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
         weiSentBySecondAccount
       );
+      const tokenSMintedForSecondAccount = await tokenSale.balanceOf(
+        secondAccount.getAddress()
+      );
 
       await burnTokenInTokenSaleContract(
         firstAccount,
         tokenSale,
-        tokenToMintForFirstAccount
+        tokenSMintedForFirstAccount
       );
 
       const secondAccountETHBalanceBeforeBurn =
@@ -414,7 +448,7 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
       const gasPriceForBurn = await burnTokenInTokenSaleContract(
         secondAccount,
         tokenSale,
-        tokenToMintForSecondAccount
+        tokenSMintedForSecondAccount
       );
 
       // Assertions after
@@ -426,19 +460,28 @@ describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
           gasPriceForBurn;
         const secondAccountETHBalanceAfterBurn =
           await ethers.provider.getBalance(secondAccount.getAddress());
-        expect(secondAccountETHBalanceAfterBurn).to.equal(
-          expectedSecondAccountETHBalanceAfterBurn
-        );
+
+        expect(
+          approximateEquality(
+            secondAccountETHBalanceAfterBurn,
+            expectedSecondAccountETHBalanceAfterBurn,
+            allowedError
+          )
+        ).to.be.true;
       }
 
       // we burnt all the tokens, so the contract should have 0 ether
-      const expectedContractETHBalanceAfterBurn = 0;
+      const expectedContractETHBalanceAfterBurn = BigInt(0);
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
-      expect(contractETHBalanceAfterBurn).to.equal(
-        expectedContractETHBalanceAfterBurn
-      );
+      expect(
+        approximateEquality(
+          contractETHBalanceAfterBurn,
+          expectedContractETHBalanceAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
 
       const expectedSecondAccountTokenBalaneAfterBurn = 0;
       const secondAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(

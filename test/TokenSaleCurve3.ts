@@ -1,19 +1,19 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { deployFixtureWithCurveSlope2AndConstant1 } from "./Fixtures";
+import { deployFixtureWithCurveSlope05AndConstant1 } from "./Fixtures";
 import {
   sendETHtoTokenSaleContract,
   burnTokenInTokenSaleContract,
 } from "./Steps";
 import { approximateEquality, allowedError } from "./Util";
 
-describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
+describe("TokenSale tests for curve with constant = 1, slope = 0.5", function () {
   describe("Calculate price,", function () {
     it("Should calculate price for the first buy", async function () {
       // Preparation
       const { tokenSale } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
       // Action
@@ -21,26 +21,28 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       const price = await tokenSale.calculatePrice(tokensToBuy);
 
       // Assertion
-      expect(price).to.equal(ethers.parseEther("15"));
+      expect(price).to.equal(ethers.parseEther("6"));
     });
 
     it("Should calculate price for the second buy", async function () {
       // Preparation
       const { tokenSale, firstAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
       await firstAccount.sendTransaction({
         to: tokenSale.getAddress(),
-        value: ethers.parseEther("15"),
+        value: ethers.parseEther("3.5"),
       });
 
       // Action
       const tokensToBuy = ethers.parseEther("3");
       const price = await tokenSale.calculatePrice(tokensToBuy);
 
-      // Assertion
-      expect(price).to.equal(ethers.parseEther("33"));
+      // Assertions
+      const expectedPrice = ethers.parseEther("9");
+      expect(approximateEquality(price, expectedPrice, allowedError)).to.be
+        .true;
     });
   });
 
@@ -48,34 +50,38 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
     it("Should calculate tokens from price before the first buy", async function () {
       // Preparation
       const { tokenSale } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
       // Action
-      const price = ethers.parseEther("15");
+      const price = ethers.parseEther("3.5");
       const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
 
-      // Assertion
-      expect(tokensToBuy).to.equal(ethers.parseEther("3"));
+      // Assertions
+      const expected = ethers.parseEther("2");
+      expect(approximateEquality(tokensToBuy, expected, allowedError)).to.be
+        .true;
     });
 
     it("Should calculate tokens from price before the second buy", async function () {
       // Preparation
       const { tokenSale, firstAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
       await firstAccount.sendTransaction({
         to: tokenSale.getAddress(),
-        value: ethers.parseEther("15"),
+        value: ethers.parseEther("3.5"),
       });
 
       // Action
-      const price = ethers.parseEther("33");
+      const price = ethers.parseEther("9");
       const tokensToBuy = await tokenSale.calculateTokensFromPrice(price);
 
-      // Assertion
-      expect(tokensToBuy).to.equal(ethers.parseEther("3"));
+      // Assertions
+      const expected = ethers.parseEther("3");
+      expect(approximateEquality(tokensToBuy, expected, allowedError)).to.be
+        .true;
     });
   });
 
@@ -83,7 +89,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
     it("Should recieve ether from ONE user and mint tokens", async function () {
       // Preparation
       const { tokenSale, firstAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
       // Assertions before
@@ -93,7 +99,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       expect(contractBalanceBefore).to.equal(0);
 
       // Action
-      const weiToSend = ethers.parseEther("8");
+      const weiToSend = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
 
       // Assertions after
@@ -106,16 +112,22 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       const tokenBalaneAfter = await tokenSale.balanceOf(
         firstAccount.getAddress()
       );
-      expect(tokenBalaneAfter).to.equal(expectedTokenBalance);
+      expect(
+        approximateEquality(
+          tokenBalaneAfter,
+          expectedTokenBalance,
+          allowedError
+        )
+      ).to.be.true;
     });
 
     it("Should recieve ether from TWO users and mint tokens", async function () {
       // Preparation
       const { tokenSale, firstAccount, secondAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiSentByFirstAccount = ethers.parseEther("8");
+      const weiSentByFirstAccount = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
@@ -123,7 +135,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       );
 
       // Action
-      const weiSentBySecondAccount = ethers.parseEther("16");
+      const weiSentBySecondAccount = ethers.parseEther("5.5");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -144,7 +156,13 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
         firstAccount.getAddress()
       );
 
-      expect(tokenBalaneFirstAccount).to.equal(expectedTokenBalaneFirstAccount);
+      expect(
+        approximateEquality(
+          tokenBalaneFirstAccount,
+          expectedTokenBalaneFirstAccount,
+          allowedError
+        )
+      ).to.be.true;
       const tokenBalaneSecondAccount = await tokenSale.balanceOf(
         secondAccount.getAddress()
       );
@@ -162,12 +180,14 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
     it("Should recieve ether from ONE user, mint tokens, burn them completely and send ether back", async function () {
       // Preparation
       const { tokenSale, firstAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiToSend = ethers.parseEther("8");
-      const tokenToMint = ethers.parseEther("2");
+      const weiToSend = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
+      const tokenSMintedForFirstAccount = await tokenSale.balanceOf(
+        firstAccount.getAddress()
+      );
 
       const firstAccountETHBalanceBeforeBurn = await ethers.provider.getBalance(
         firstAccount.getAddress()
@@ -177,7 +197,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       const gasPrice = await burnTokenInTokenSaleContract(
         firstAccount,
         tokenSale,
-        tokenToMint
+        tokenSMintedForFirstAccount
       );
 
       // Assertions after
@@ -186,18 +206,26 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
           firstAccountETHBalanceBeforeBurn + BigInt(weiToSend) - gasPrice;
         const firstAccountETHBalanceAfterBurn =
           await ethers.provider.getBalance(firstAccount.getAddress());
-        expect(firstAccountETHBalanceAfterBurn).to.equal(
-          expectedFirstAccountETHBalanceAfterBurn
-        );
+        expect(
+          approximateEquality(
+            firstAccountETHBalanceAfterBurn,
+            expectedFirstAccountETHBalanceAfterBurn,
+            allowedError
+          )
+        ).to.be.true;
       }
 
-      const expectedContractETHBalanceAfterBurn = 0;
+      const expectedContractETHBalanceAfterBurn = BigInt(0);
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
-      expect(contractETHBalanceAfterBurn).to.equal(
-        expectedContractETHBalanceAfterBurn
-      );
+      expect(
+        approximateEquality(
+          contractETHBalanceAfterBurn,
+          expectedContractETHBalanceAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
 
       const expectedFirstAccountTokenBalaneAfterBurn = 0;
       const firstAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
@@ -211,10 +239,10 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
     it("Should recieve ether from ONE user, mint tokens, burn them partially and send ether back", async function () {
       // Preparation
       const { tokenSale, firstAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiToSend = ethers.parseEther("8");
+      const weiToSend = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(firstAccount, tokenSale, weiToSend);
 
       const firstAccountETHBalanceBeforeBurn = await ethers.provider.getBalance(
@@ -231,49 +259,61 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
 
       // Assertions after
       if (gasPrice) {
-        const expectedWeiToReceived = ethers.parseEther("5");
+        const expectedWeiToReceived = ethers.parseEther("2");
         const expectedFirstAccountETHBalanceAfterBurn =
           firstAccountETHBalanceBeforeBurn +
           BigInt(expectedWeiToReceived) -
           gasPrice;
         const firstAccountETHBalanceAfterBurn =
           await ethers.provider.getBalance(firstAccount.getAddress());
-        expect(firstAccountETHBalanceAfterBurn).to.equal(
-          expectedFirstAccountETHBalanceAfterBurn
-        );
+        expect(
+          approximateEquality(
+            firstAccountETHBalanceAfterBurn,
+            expectedFirstAccountETHBalanceAfterBurn,
+            allowedError
+          )
+        ).to.be.true;
       }
 
-      const expectedContractETHBalanceAfterBurn = ethers.parseEther("3");
+      const expectedContractETHBalanceAfterBurn = ethers.parseEther("1.5");
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
-      expect(contractETHBalanceAfterBurn).to.equal(
-        expectedContractETHBalanceAfterBurn
-      );
+      expect(
+        approximateEquality(
+          contractETHBalanceAfterBurn,
+          expectedContractETHBalanceAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
 
       const expectedFirstAccountTokenBalaneAfterBurn = ethers.parseEther("1");
       const firstAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
         firstAccount.getAddress()
       );
-      expect(firstAccountTokenBalaneAfterBurn).to.equal(
-        expectedFirstAccountTokenBalaneAfterBurn
-      );
+      expect(
+        approximateEquality(
+          firstAccountTokenBalaneAfterBurn,
+          expectedFirstAccountTokenBalaneAfterBurn,
+          allowedError
+        )
+      ).to.be.true;
     });
 
     it("Should recieve ether from TWO users, mint tokens, burn ONE users tokens completely and send ether back", async function () {
       // Preparation
       const { tokenSale, firstAccount, secondAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiSentByFirstAccount = ethers.parseEther("8");
+      const weiSentByFirstAccount = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
         weiSentByFirstAccount
       );
 
-      const weiSentBySecondAccount = ethers.parseEther("16");
+      const weiSentBySecondAccount = ethers.parseEther("5.5");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -321,33 +361,30 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
           allowedError
         )
       ).to.be.true;
-      const expectedSecondAccountTokenBalaneAfterBurn = BigInt(0);
+
+      const expectedSecondAccountTokenBalaneAfterBurn = 0;
       const secondAccountTokenBalaneAfterBurn = await tokenSale.balanceOf(
         secondAccount.getAddress()
       );
-      expect(
-        approximateEquality(
-          secondAccountTokenBalaneAfterBurn,
-          expectedSecondAccountTokenBalaneAfterBurn,
-          allowedError
-        )
-      ).to.be.true;
+      expect(secondAccountTokenBalaneAfterBurn).to.equal(
+        expectedSecondAccountTokenBalaneAfterBurn
+      );
     });
 
     it("Should recieve ether from TWO users, mint tokens, burn ONE users tokens partially and send ether back", async function () {
       // Preparation
       const { tokenSale, firstAccount, secondAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiSentByFirstAccount = ethers.parseEther("8");
+      const weiSentByFirstAccount = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
         weiSentByFirstAccount
       );
 
-      const weiSentBySecondAccount = ethers.parseEther("16");
+      const weiSentBySecondAccount = ethers.parseEther("5.5");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
@@ -367,7 +404,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
 
       // Assertions after
       if (gasPriceForBurn) {
-        const expectedWeiToReceived = ethers.parseEther("9");
+        const expectedWeiToReceived = ethers.parseEther("3");
         const expectedSecondAccountETHBalanceAfterBurn =
           secondAccountETHBalanceBeforeBurn +
           BigInt(expectedWeiToReceived) -
@@ -383,7 +420,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
         ).to.be.true;
       }
 
-      const expectedContractETHBalanceAfterBurn = ethers.parseEther("15");
+      const expectedContractETHBalanceAfterBurn = ethers.parseEther("6");
       const contractETHBalanceAfterBurn = await ethers.provider.getBalance(
         tokenSale.getAddress()
       );
@@ -411,10 +448,10 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
     it("Should recieve ether from TWO users, mint tokens, burn BOTH users tokens completely and send ether back", async function () {
       // Preparation
       const { tokenSale, firstAccount, secondAccount } = await loadFixture(
-        deployFixtureWithCurveSlope2AndConstant1
+        deployFixtureWithCurveSlope05AndConstant1
       );
 
-      const weiSentByFirstAccount = ethers.parseEther("8");
+      const weiSentByFirstAccount = ethers.parseEther("3.5");
       await sendETHtoTokenSaleContract(
         firstAccount,
         tokenSale,
@@ -424,13 +461,13 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
         firstAccount.getAddress()
       );
 
-      const weiSentBySecondAccount = ethers.parseEther("16");
+      const weiSentBySecondAccount = ethers.parseEther("5.5");
       await sendETHtoTokenSaleContract(
         secondAccount,
         tokenSale,
         weiSentBySecondAccount
       );
-      const tokensMintedForSecondAccount = await tokenSale.balanceOf(
+      const tokenSMintedForSecondAccount = await tokenSale.balanceOf(
         secondAccount.getAddress()
       );
 
@@ -447,7 +484,7 @@ describe("TokenSale tests for curve with constant = 1, slope = 2", function () {
       const gasPriceForBurn = await burnTokenInTokenSaleContract(
         secondAccount,
         tokenSale,
-        tokensMintedForSecondAccount
+        tokenSMintedForSecondAccount
       );
 
       // Assertions after
