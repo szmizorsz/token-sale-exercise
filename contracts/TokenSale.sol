@@ -311,26 +311,30 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
         uint256 _price
     ) private view returns (uint256) {
         PRBMath.UD60x18 memory _price_ud = PRBMath.UD60x18({value: _price});
-        PRBMath.UD60x18 memory totalSupply_ud = PRBMath.UD60x18({
-            value: totalSupply()
-        });
-        PRBMath.UD60x18 memory constant_2 = PRBMath.UD60x18({value: 2e18});
-        PRBMath.UD60x18 memory constant_8 = PRBMath.UD60x18({value: 8e18});
-        return
-            curveConstant
-                .mul(constant_2)
-                .add(curveSlope.mul(totalSupply_ud.mul(constant_2)))
-                .add(curveSlope)
-                .pow(constant_2)
-                .add(_price_ud.mul(curveSlope).mul(constant_8))
-                .sqrt()
-                .sub(
-                    curveConstant
-                        .mul(constant_2)
-                        .add(curveSlope.mul(constant_2).mul(totalSupply_ud))
-                        .add(curveSlope)
-                )
-                .div(curveSlope.mul(constant_2))
-                .value;
+        if (curveSlope.value != 0) {
+            PRBMath.UD60x18 memory totalSupply_ud = PRBMath.UD60x18({
+                value: totalSupply()
+            });
+            PRBMath.UD60x18 memory constant_2 = PRBMath.UD60x18({value: 2e18});
+            PRBMath.UD60x18 memory constant_8 = PRBMath.UD60x18({value: 8e18});
+            return
+                curveConstant
+                    .mul(constant_2)
+                    .add(curveSlope.mul(totalSupply_ud.mul(constant_2)))
+                    .add(curveSlope)
+                    .pow(constant_2)
+                    .add(_price_ud.mul(curveSlope).mul(constant_8))
+                    .sqrt()
+                    .sub(
+                        curveConstant
+                            .mul(constant_2)
+                            .add(curveSlope.mul(constant_2).mul(totalSupply_ud))
+                            .add(curveSlope)
+                    )
+                    .div(curveSlope.mul(constant_2))
+                    .value;
+        } else {
+            return _price_ud.mul(curveConstant).value;
+        }
     }
 }

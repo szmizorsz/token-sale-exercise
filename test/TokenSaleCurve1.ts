@@ -8,7 +8,7 @@ import {
 } from "./Steps";
 import { approximateEquality, allowedError } from "./Util";
 
-describe("TokenSale tests for curve with constant = 0, slope = 1", function () {
+describe("TokenSale tests for curve with constant = 0.0, slope = 1.0", function () {
   describe("Calculate price", function () {
     it("Should calculate price for the first buy", async function () {
       // Preparation

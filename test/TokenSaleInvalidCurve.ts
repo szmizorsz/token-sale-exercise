@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 describe("TokenSale tests for invalid curve with constant = 0, slope = 0", function () {
   describe("Calculate price", function () {
-    it("Should calculate price for the first buy", async function () {
+    it("Should fail to deploy with invalid curve", async function () {
       const curveSlope = 0;
       const curveConstant = 0;
 
