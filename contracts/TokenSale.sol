@@ -12,8 +12,11 @@ import "./IERC1363Spender.sol";
 import "@prb/math/contracts/PRBMathUD60x18Typed.sol";
 
 /**
- * @title ERC1363
- * @dev Implementation of an ERC1363 interface.
+ * @title Token Sale with a Linear Bonding Curve
+ * @dev The linear curve is defined by its slope and the constant: y = slope * x + constant.
+ * Tokens are represented with fractions by 18 decimals (same as ethers in wei).
+ * So all inputs (slope, constant, price, nr of tokens) and outputs are handled as unsigned integers with 18 decimal fractions.
+ * E.g. 0.5 = 5e17 = 500,000,000,000,000,000
  */
 contract TokenSale is
     ERC20,
@@ -28,6 +31,10 @@ contract TokenSale is
     PRBMath.UD60x18 private curveConstant;
     PRBMath.UD60x18 private curveSlope;
 
+    /**
+     * @param _curveSlope the linera curve slope: unsigned integers with 18 decimal fractions
+     * @param _curveConstant the linera curve constant: unsigned integers with 18 decimal fractions
+     */
     constructor(
         uint256 _curveSlope,
         uint256 _curveConstant
@@ -38,11 +45,6 @@ contract TokenSale is
         );
         curveConstant = PRBMath.UD60x18({value: _curveConstant});
         curveSlope = PRBMath.UD60x18({value: _curveSlope});
-    }
-
-    receive() external payable {
-        uint256 tokenAmount = _calculateTokensFromPrice(msg.value);
-        _mint(msg.sender, tokenAmount);
     }
 
     /**
@@ -58,8 +60,10 @@ contract TokenSale is
     }
 
     /**
-     * @dev Overrides the ERC20 transfer function with same functionality but including one extra step:
-     * if 'to' is the tokenSale contract address, then it calls the transferAndCall function to trigger the callback
+     * @dev Overrides the ERC20 transfer function with the same functionality but adding one extra step:
+     * if 'to' is the tokenSale contract address, then it calls the transferAndCall function to trigger the callback.
+     * Rational: users using the original transfer function could accidentally send tokens to the tokenSale contract
+     * without triggering the burning and sending ETH back mechanism.
      * @param to The address to transfer to.
      * @param amount The amount to be transferred.
      * @return A boolean that indicates if the operation was successful.
@@ -110,8 +114,10 @@ contract TokenSale is
     }
 
     /**
-     * @dev Overrides the ERC20 transferFrom function with same functionality but including one extra step:
-     * if 'to' is the tokenSale contract address, then it calls the transferFromAndCall function to trigger the callback
+     * @dev Overrides the ERC20 transferFrom function with the same functionality but adding one extra step:
+     * if 'to' is the tokenSale contract address, then it calls the transferFromAndCall function to trigger the callback.
+     * Rational: users using the original transferFrom function could accidentally send tokens to the tokenSale contract
+     * without triggering the burning and sending ETH back mechanism.
      * @param from The address which you want to send tokens from
      * @param to The address which you want to transfer to
      * @param amount The amount of tokens to be transferred
@@ -203,6 +209,19 @@ contract TokenSale is
         return true;
     }
 
+    /**
+     * @notice Handle the receipt of ERC1363 tokens:
+     * Burns the tokens and send the corresponding amount of ETH back to the seller.
+     * The return ETH amount is calculated according to the current state of the linear bonding curve.
+     * @dev Only the TokenSale contract can call this function on the recipient
+     * after a `transfer` or a `transferFrom`. This function MAY throw to revert and reject the
+     * transfer. Return of other than the magic value MUST result in the
+     * transaction being reverted.
+     * Note: the token contract address is always the message sender.
+     * @param sender address The address which are token transferred from
+     * @param amount uint256 The amount of tokens transferred
+     * @return `bytes4(keccak256("onTransferReceived(address,address,uint256,bytes)"))` unless throwing
+     */
     function onTransferReceived(
         address,
         address sender,
@@ -217,7 +236,7 @@ contract TokenSale is
         _burn(address(this), amount);
 
         // After the burn, the value the user gets for the burnt tokens:
-        // as if he would buy the tokens at this point
+        // as if he would buy the tokens again at this point
         uint etherValue = _calculatePrice(amount);
         (bool success, ) = sender.call{value: etherValue}("");
         require(success, "Ether payment failed on token recieval");
@@ -303,8 +322,8 @@ contract TokenSale is
     }
 
     /**
-     * @dev Returns the price for buying a specified number of tokens.
-     * @param tokensToBuy The number of tokens to buy.
+     * @dev Returns the price for buying the given number of tokens.
+     * @param tokensToBuy The number of tokens to buy: unsigned integer with 18 decimal fractions
      * @return The price in wei.
      */
     function calculatePrice(
@@ -314,9 +333,9 @@ contract TokenSale is
     }
 
     /**
-     * @dev Returns the price for buying a specified number of tokens.
-     * @param price The number of tokens to buy.
-     * @return The price in wei.
+     * @dev Returns the number of tokens that could be bought from the given price
+     * @param price The price: unsigned integer with 18 decimal fractions
+     * @return The number of tokens: unsigned integer with 18 decimal fractions
      */
     function calculateTokensFromPrice(
         uint256 price
@@ -325,9 +344,18 @@ contract TokenSale is
     }
 
     /**
-     * @dev Calculates the price for buying a certain number of tokens based on the bonding curve formula.
-     * @param _tokensToBuy The number of tokens to buy.
-     * @return The price in wei for the specified number of tokens.
+     * @dev When a user sends ETH to the contract, it mints the corresponding amount of tokens and transfer them to the buyer.
+     * The linear bonding curve determines the token price.
+     */
+    receive() external payable {
+        uint256 tokenAmount = _calculateTokensFromPrice(msg.value);
+        _mint(msg.sender, tokenAmount);
+    }
+
+    /**
+     * @dev Returns the price for buying the given number of tokens.
+     * @param _tokensToBuy The number of tokens to buy: unsigned integer with 18 decimal fractions
+     * @return The price in wei.
      */
     function _calculatePrice(
         uint256 _tokensToBuy
@@ -353,9 +381,9 @@ contract TokenSale is
     }
 
     /**
-     * @dev Calculates the price for buying a certain number of tokens based on the bonding curve formula.
-     * @param _price The number of tokens to buy.
-     * @return The price in wei for the specified number of tokens.
+     * @dev Returns the number of tokens that could be bought from the given price
+     * @param _price The price: unsigned integer with 18 decimal fractions
+     * @return The number of tokens: unsigned integer with 18 decimal fractions
      */
     function _calculateTokensFromPrice(
         uint256 _price
