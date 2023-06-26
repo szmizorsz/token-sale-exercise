@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./IERC1363.sol";
 import "./IERC1363Receiver.sol";
@@ -14,7 +15,13 @@ import "@prb/math/contracts/PRBMathUD60x18Typed.sol";
  * @title ERC1363
  * @dev Implementation of an ERC1363 interface.
  */
-contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
+contract TokenSale is
+    ERC20,
+    IERC1363,
+    ERC165,
+    IERC1363Receiver,
+    ReentrancyGuard
+{
     using Address for address;
     using PRBMathUD60x18Typed for PRBMath.UD60x18;
 
@@ -201,7 +208,7 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
         address sender,
         uint256 amount,
         bytes calldata
-    ) external returns (bytes4) {
+    ) external nonReentrant returns (bytes4) {
         require(
             msg.sender == address(this),
             "Only tokenSale contract can trigger onTransferReceived"
