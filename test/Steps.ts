@@ -34,3 +34,56 @@ export async function burnTokenInTokenSaleContract(
   // return the gasprice of the transaction
   return gasPrice;
 }
+
+export async function burnTokenWithTransferInTokenSaleContract(
+  account: any,
+  contract: TokenSale,
+  tokenToMint: bigint
+) {
+  const burnTx = await contract
+    .connect(account)
+    .transfer(contract.getAddress(), tokenToMint);
+
+  const receipt = await burnTx.wait();
+  const gasUsed = receipt?.gasUsed;
+  const gasPrice = gasUsed ? burnTx.gasPrice * gasUsed : undefined;
+
+  // return the gasprice of the transaction
+  return gasPrice;
+}
+
+export async function burnTokenWithTransferFromInTokenSaleContract(
+  spender: any,
+  from: any,
+  contract: TokenSale,
+  tokenToMint: bigint
+) {
+  const burnTx = await contract
+    .connect(spender)
+    .transferFrom(from.getAddress(), contract.getAddress(), tokenToMint);
+
+  const receipt = await burnTx.wait();
+  const gasUsed = receipt?.gasUsed;
+  const gasPrice = gasUsed ? burnTx.gasPrice * gasUsed : undefined;
+
+  // return the gasprice of the transaction
+  return gasPrice;
+}
+
+export async function apporveTransferFromInTokenSaleContract(
+  approver: any,
+  approved: any,
+  contract: TokenSale,
+  tokenToMint: bigint
+) {
+  const burnTx = await contract
+    .connect(approver)
+    .approve(approved.getAddress(), tokenToMint);
+
+  const receipt = await burnTx.wait();
+  const gasUsed = receipt?.gasUsed;
+  const gasPrice = gasUsed ? burnTx.gasPrice * gasUsed : undefined;
+
+  // return the gasprice of the transaction
+  return gasPrice;
+}

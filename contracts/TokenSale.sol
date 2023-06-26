@@ -51,6 +51,25 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
     }
 
     /**
+     * @dev Overrides the ERC20 transfer function with same functionality but including one extra step:
+     * if 'to' is the tokenSale contract address, then it calls the transferAndCall function to trigger the callback
+     * @param to The address to transfer to.
+     * @param amount The amount to be transferred.
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function transfer(
+        address to,
+        uint256 amount
+    ) public virtual override(ERC20, IERC20) returns (bool) {
+        if (to == address(this)) {
+            return transferAndCall(to, amount, "");
+        }
+        address owner = _msgSender();
+        _transfer(owner, to, amount);
+        return true;
+    }
+
+    /**
      * @dev Transfer tokens to a specified address and then execute a callback on `to`.
      * @param to The address to transfer to.
      * @param amount The amount to be transferred.
@@ -75,11 +94,33 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
         uint256 amount,
         bytes memory data
     ) public virtual override returns (bool) {
-        transfer(to, amount);
+        _transfer(_msgSender(), to, amount);
         require(
             _checkOnTransferReceived(_msgSender(), to, amount, data),
             "ERC1363: receiver returned wrong data"
         );
+        return true;
+    }
+
+    /**
+     * @dev Overrides the ERC20 transferFrom function with same functionality but including one extra step:
+     * if 'to' is the tokenSale contract address, then it calls the transferFromAndCall function to trigger the callback
+     * @param from The address which you want to send tokens from
+     * @param to The address which you want to transfer to
+     * @param amount The amount of tokens to be transferred
+     * @return A boolean that indicates if the operation was successful.
+     */
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual override(ERC20, IERC20) returns (bool) {
+        if (to == address(this)) {
+            return transferFromAndCall(from, to, amount, "");
+        }
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
         return true;
     }
 
@@ -112,7 +153,9 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
         uint256 amount,
         bytes memory data
     ) public virtual override returns (bool) {
-        transferFrom(from, to, amount);
+        address spender = _msgSender();
+        _spendAllowance(from, spender, amount);
+        _transfer(from, to, amount);
         require(
             _checkOnTransferReceived(from, to, amount, data),
             "ERC1363: receiver returned wrong data"
