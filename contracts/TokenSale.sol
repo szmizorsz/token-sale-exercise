@@ -25,6 +25,10 @@ contract TokenSale is ERC20, IERC1363, ERC165, IERC1363Receiver {
         uint256 _curveSlope,
         uint256 _curveConstant
     ) ERC20("LinearTokenSale", "LTS") {
+        require(
+            _curveSlope != 0 || _curveConstant != 0,
+            "Invalid curve: slope and constant are both zero"
+        );
         curveConstant = PRBMath.UD60x18({value: _curveConstant});
         curveSlope = PRBMath.UD60x18({value: _curveSlope});
     }
