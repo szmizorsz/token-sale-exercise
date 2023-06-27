@@ -1,11 +1,12 @@
 # ERC1363 Token Sale with a Linear Bonding Curve
 
-The curve is defined: $\y=sx+c$
+The curve is defined: $`y=sx+c`$
 
-The price is defined: $\p=(2c+s(2t+b+1))b/2$
-where $t$ is the current total supply and $b$ is the number of tokens to buy.
+The price calculation: $`p=(2c+s(2t+b+1))b/2`$
 
-The number of tokens to buy from a given price: $\b=(-(2c+2st+s)+sqrt{(2c+2st+s)^2+8ps})/2s$
+Where $t$ is the current total supply and $b$ is the number of tokens to buy.
+
+The number of tokens to buy from a given price: $`b=(-(2c+2st+s)+sqrt{((2c+2st+s)^2+8ps)})/2s`$
 
 Some thoughts on possible improvements:
 
